@@ -416,18 +416,24 @@ def bulk_fill_hanzi():
             }
             mw.progress.update(label=msg, value=i)
 
-            hanzi = get_first(config['fields']['hanzi'], copy)
+            hanzi = get_first(hanzi_fields, copy)
             fill_simp(hanzi, copy)
             fill_trad(hanzi, copy)
             fill_color(hanzi, copy)
-            n_updated = save_note(note, copy)
+            if save_note(note, copy) > 0:
+                n_updated += 1
 
-    msg = '''
-    <b>Update complete!</b> %(hanzi)s<br>
-    <b>Updated:</b> %(filled)d notes''' % {
-        'hanzi': get_hanzi(copy),
-        'filled': n_updated,
-    }
+
+    if copy:
+        msg = '''
+        <b>Update complete!</b> %(hanzi)s<br>
+        <b>Updated:</b> %(filled)d notes''' % {
+            'hanzi': get_hanzi(copy),
+            'filled': n_updated,
+        }
+    else:
+        msg = "Didn't fill any notes"
+
     mw.progress.finish()
     showInfo(msg)
 
