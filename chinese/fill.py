@@ -331,7 +331,8 @@ def bulk_fill_classifiers():
         field_names='<i>classifier</i>', extra_info=''
     )
 
-    fields = config.get_fields(['classifier'])
+    target_fields = config.get_fields(['classifier'])
+    hanzi_fields = config.get_fields(["hanzi"])
 
     if not askUser(prompt):
         return
@@ -340,18 +341,21 @@ def bulk_fill_classifiers():
     n_updated = 0
     n_failed = 0
 
-    note_ids = Finder(mw.col).findNotes('deck:current')
+    note_ids = mw.col.findNotes('deck:current')
     mw.progress.start(immediate=True, min=0, max=len(note_ids))
 
     for i, nid in enumerate(note_ids):
         note = mw.col.getNote(nid)
         copy = dict(note)
-        hanzi = get_hanzi(copy)
+        # Ensure note type has hanzi present before trying to get
+        hanzi = None
+        if has_any_field(copy, hanzi_fields):
+            hanzi = get_hanzi(copy)
 
-        if has_any_field(copy, fields) and hanzi:
+        if hanzi and has_any_field(copy, target_fields):
             n_processed += 1
 
-            if all_fields_empty(copy, fields):
+            if all_fields_empty(copy, target_fields):
                 if fill_classifier(hanzi, copy):
                     n_updated += 1
                 else:
@@ -377,24 +381,31 @@ def bulk_fill_classifiers():
 def bulk_fill_hanzi():
     prompt = PROMPT_TEMPLATE.format(field_names='<i>hanzi</i>', extra_info='')
 
-    fields = config.get_fields(['traditional', 'simplified'])
+    target_fields = config.get_fields(["traditional", "simplified", "colorHanzi"])
+    hanzi_fields = config.get_fields(["hanzi"])
 
     if not askUser(prompt):
         return
 
     d_has_fields = 0
+    n_processed = 0
     n_updated = 0
 
-    note_ids = Finder(mw.col).findNotes('deck:current')
+    note_ids = mw.col.findNotes("deck:current")
     mw.progress.start(immediate=True, min=0, max=len(note_ids))
 
+    copy = None
     for i, nid in enumerate(note_ids):
         note = mw.col.getNote(nid)
         copy = dict(note)
 
-        if has_any_field(copy, fields) and has_any_field(
-            config['fields']['hanzi'], copy
-        ):
+        # Ensure note type has hanzi present before trying to get
+        hanzi = None
+        if has_any_field(copy, hanzi_fields):
+            hanzi = get_hanzi(copy)
+
+        if hanzi and has_any_field(copy, target_fields):
+            n_processed += 1
             d_has_fields += 1
 
             msg = '''
