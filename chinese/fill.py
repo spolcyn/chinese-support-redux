@@ -191,9 +191,8 @@ def bulk_fill_transcript():
         field_names='<i>transcription</i> and <i>ruby</i>', extra_info=''
     )
 
-    fields = config.get_fields(
-        ['pinyin', 'pinyinTaiwan', 'cantonese', 'bopomofo']
-    )
+    target_fields = config.get_fields(['pinyin', 'pinyinTaiwan', 'cantonese', 'bopomofo'])
+    hanzi_fields = config.get_fields(["hanzi"])
 
     if not askUser(prompt):
         return
@@ -202,16 +201,20 @@ def bulk_fill_transcript():
     d_added_pinyin = 0
     n_updated = 0
 
-    note_ids = Finder(mw.col).findNotes('deck:current')
+    note_ids = mw.col.findNotes("deck:current")
     mw.progress.start(immediate=True, min=0, max=len(note_ids))
 
+    copy = None
     for i, nid in enumerate(note_ids):
         note = mw.col.getNote(nid)
         copy = dict(note)
 
-        if has_any_field(copy, fields) and has_any_field(
-            config['fields']['hanzi'], copy
-        ):
+        # Ensure note type has hanzi present before trying to get
+        hanzi = None
+        if has_any_field(copy, hanzi_fields):
+            hanzi = get_hanzi(copy)
+
+        if hanzi and has_any_field(copy, target_fields):
             d_has_fields += 1
 
             msg = '''
@@ -224,7 +227,6 @@ def bulk_fill_transcript():
             }
             mw.progress.update(label=msg, value=i)
 
-            hanzi = get_first(config['fields']['hanzi'], copy)
             results = fill_transcript(hanzi, copy)
 
             if results > 0:
@@ -234,14 +236,17 @@ def bulk_fill_transcript():
             save_note(note, copy)
 
     mw.progress.finish()
-    msg = '''
-    <b>Processed:</b> %(hanzi)s<br>
-    <b>Filled pinyin:</b> %(pinyin)d notes<br>
-    <b>Updated: </b>%(updated)d fields''' % {
-        'hanzi': get_hanzi(copy),
-        'pinyin': d_added_pinyin,
-        'updated': n_updated,
-    }
+    if copy:
+        msg = '''
+        <b>Processed:</b> %(hanzi)s<br>
+        <b>Filled pinyin:</b> %(pinyin)d notes<br>
+        <b>Updated: </b>%(updated)d fields''' % {
+            'hanzi': get_hanzi(copy),
+            'pinyin': d_added_pinyin,
+            'updated': n_updated,
+        }
+    else:
+        msg = "Updated 0 notes"
     showInfo(msg)
 
 
