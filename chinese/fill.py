@@ -121,7 +121,8 @@ def bulk_fill_sound():
         ),
     )
 
-    fields = config.get_fields(['sound', 'mandarinSound', 'cantoneseSound'])
+    target_fields = config.get_fields(['sound', 'mandarinSound', 'cantoneseSound'])
+    hanzi_fields = config.get_fields(["hanzi"])
 
     if not askUser(prompt):
         return
@@ -131,20 +132,22 @@ def bulk_fill_sound():
     n_updated = 0
     n_failed = 0
 
-    note_ids = Finder(mw.col).findNotes('deck:current')
+    note_ids = mw.col.findNotes("deck:current")
     mw.progress.start(immediate=True, min=0, max=len(note_ids))
 
     for i, nid in enumerate(note_ids):
         orig = mw.col.getNote(nid)
         copy = dict(orig)
 
-        if has_any_field(copy, fields) and has_any_field(
-            config['fields']['hanzi'], copy
-        ):
-            d_has_fields += 1
-            hanzi = get_first(config['fields']['hanzi'], copy)
+        # Ensure note type has hanzi present before trying to get
+        hanzi = None
+        if has_any_field(copy, hanzi_fields):
+            hanzi = get_hanzi(copy)
 
-            if all_fields_empty(copy, fields):
+        if hanzi and has_any_field(copy, target_fields):
+            d_has_fields += 1
+
+            if all_fields_empty(copy, target_fields):
                 msg = '''
                 <b>Processing:</b> %(hanzi)s<br>
                 <b>Updated:</b> %(n_updated)d notes<br>
