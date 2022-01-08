@@ -49,7 +49,7 @@ class ConfigManager:
 
     def save(self):
         with open(self.saved_path, 'w', encoding='utf-8') as f:
-            dump(self.config, f)
+            dump(self.config, f, indent=4)
         mw.addonManager.writeConfig(__name__, self.config)
 
     def get_fields(self, groups=None):

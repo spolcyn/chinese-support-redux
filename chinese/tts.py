@@ -7,6 +7,7 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/copyleft/agpl.html
 
 from .aws import AWS4Signer
+from .main import config
 
 from os.path import basename, exists, join
 from re import sub
@@ -30,6 +31,7 @@ class AudioDownloader:
             'google': self.get_google,
             'baidu': self.get_baidu,
             'aws': self.get_aws,
+            'azure': self.get_azure,
         }.get(self.service)
 
     def get_path(self):
@@ -51,6 +53,34 @@ class AudioDownloader:
         self.func()
 
         return basename(self.path)
+
+    def get_azure(self):
+        try:
+            azure_api_key = config["tts"]["azure"]["api_key"] # type: ignore
+            azure_region = config["tts"]["azure"]["region"] # type: ignore
+        except KeyError as e:
+            raise RuntimeError(f"Failed to get Azure API key from config") from e
+
+        data = ('<speak xmlns="http://www.w3.org/2001/10/synthesis" '
+                        'xmlns:mstts="http://www.w3.org/2001/mstts" '
+                        'xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" '
+                        'xml:lang="zh-CN"><voice name="zh-CN-XiaochenNeural"><prosody '
+                        f'rate="1%" pitch="0%">{self.text}</prosody></voice></speak>').encode("UTF-8")
+        base_url = f"https://{azure_region}.tts.speech.microsoft.com/cognitiveservices/v1"
+        request = Request(base_url, data=data)
+
+        request.add_header("Ocp-Apim-Subscription-Key", azure_api_key)
+        request.add_header("Content-Type", "application/ssml+xml")
+        request.add_header("X-Microsoft-OutputFormat", "audio-16khz-128kbitrate-mono-mp3")
+        request.add_header('User-Agent', 'curl')
+
+        response = urlopen(request, timeout=5)
+
+        if response.code != 200:
+            raise ValueError('{}: {}'.format(response.code, response.msg))
+
+        with open(self.path, 'wb') as audio:
+            audio.write(response.read())
 
     def get_google(self):
         tts = gTTS(self.text, lang=self.lang, tld='cn')

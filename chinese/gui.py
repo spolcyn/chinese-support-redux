@@ -45,6 +45,7 @@ SPEECH_ENGINES = {
     'Google Mandarin (PRC)': 'google|zh-CN',
     'Google Mandarin (Taiwan)': 'google|zh-TW',
     'Amazon Polly' : 'aws|Zhiyu',
+    'Azure CogServices': 'azure|zh-CN',
     'Disabled': None,
 }
 
