@@ -6,6 +6,7 @@
 # Inspiration: Tymon Warecki
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/copyleft/agpl.html
 
+from requests.models import HTTPError
 from .aws import AWS4Signer
 from .main import config
 
@@ -13,6 +14,7 @@ from os.path import basename, exists, join
 from re import sub
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 import requests
 from aqt import mw
@@ -74,10 +76,14 @@ class AudioDownloader:
         request.add_header("X-Microsoft-OutputFormat", "audio-16khz-128kbitrate-mono-mp3")
         request.add_header('User-Agent', 'curl')
 
-        response = urlopen(request, timeout=5)
+        try:
+            response = urlopen(request, timeout=5)
+        except HTTPError as exc:
+            raise RuntimeError(f"HTTPError {exc.code}: {exc.reason} (headers: {exc.headers})") from exc
+
 
         if response.code != 200:
-            raise ValueError('{}: {}'.format(response.code, response.msg))
+            raise ValueError('{}: {}: {}'.format(response.code, response.msg, response.reason))
 
         with open(self.path, 'wb') as audio:
             audio.write(response.read())
@@ -102,7 +108,7 @@ class AudioDownloader:
         response = urlopen(request, timeout=5)
 
         if response.code != 200:
-            raise ValueError('{}: {}'.format(response.code, response.msg))
+            raise ValueError('{}: {}: {}'.format(response.code, response.msg, response.reason))
 
         with open(self.path, 'wb') as audio:
             audio.write(response.read())

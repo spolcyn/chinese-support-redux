@@ -161,7 +161,7 @@ def bulk_fill_sound():
                 n_updated += s
                 n_failed += f
                 save_note(orig, copy)
-                sleep(5)
+                # sleep(5)
             else:
                 d_already_had_sound += 1
 
